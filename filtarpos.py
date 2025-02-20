@@ -3,7 +3,7 @@ import pandas as pd
 # Ruta del archivo de entrada (modifícala según sea necesario)
 ruta_entrada = r"C:\Users\Juan\Downloads\unido.xlsx"
 # Ruta del archivo de salida
-ruta_salida = r"C:\Users\Juan\Downloads\Total219.xlsx"
+ruta_salida = r"C:\Users\Juan\Downloads\totalps.xlsx"
 
 # Lista de subdivisiones a filtrar
 subdivisiones = [
@@ -13,7 +13,7 @@ subdivisiones = [
 
 # Columnas a incluir en el archivo final
 columnas_a_incluir = [
-    "Jefes", "Nº pers", "fecha ing", "Número de personal", "Soc", "Sociedad", "Div",
+    "Jefe", "Nº pers", "fecha ing", "Número de personal", "Soc", "Sociedad", "Div",
     "División de personal", "Subdivisión de", "Grupo de personal",
     "Área de personal", "Área de nómina", "Ce.coste", "Centro de coste", " Un.org.",
     "Unidad organizativa", "Posición", "Posición.1", "U.Org.Superior"
