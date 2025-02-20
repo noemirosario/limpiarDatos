@@ -8,6 +8,9 @@ import io
 st.title("📂 ETL de Dummys de Artículos para su integración hacia InDesign")
 st.write("Sube un archivo de Excel y procesa la información para generar un CSV limpio.")
 
+folder_selected = st.text_input("Ingrese la ruta de la carpeta que contiene los archivos Excel:")
+
+
 # Columnas a eliminar
 COLUMNAS_A_ELIMINAR = [
     "Pag Ant", "Catalogo Anterior", "Descripción", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Price",
@@ -100,36 +103,43 @@ def limpiar_archivo(file):
         return None
 
 
-uploaded_files = st.file_uploader("Sube uno o más archivos Excel", type=["xlsx"], accept_multiple_files=True)
+if folder_selected:
+    if os.path.isdir(folder_selected):
+        archivos_excel = [f for f in os.listdir(folder_selected) if f.endswith((".xlsx", ".xls"))]
 
-if uploaded_files:
-    for file in uploaded_files:
-        df_procesado = limpiar_archivo(file)
-        st.write(f"Vista previa de: {file.name}")
-        st.dataframe(df_procesado)
+        if archivos_excel:
+            st.write(f"Archivos encontrados: {archivos_excel}")
 
-        # Obtener solo el nombre del archivo sin la extensión
-        file_name_base = os.path.splitext(file.name)[0]
+            for archivo in archivos_excel:
+                ruta_completa = os.path.join(folder_selected, archivo)
+                df_procesado = limpiar_archivo(ruta_completa)
 
-        # Descargar CSV
-        csv = df_procesado.to_csv(index=False).encode("utf-8-sig")
-        st.download_button(
-            label="📥 Descargar CSV",
-            data=csv,
-            file_name=f"procesado_{file_name_base}.csv",
-            mime="text/csv"
-        )
+                if df_procesado is not None:
+                    st.write(f"📊 Vista previa de {archivo}:")
+                    st.dataframe(df_procesado)
 
-        # Generar Excel
-        excel_output = io.BytesIO()
-        with pd.ExcelWriter(excel_output, engine="openpyxl") as writer:
-            df_procesado.to_excel(writer, index=False)
-        excel_output.seek(0)
+                    # Generar CSV con codificación UTF-8 con BOM
+                    csv_buffer = io.StringIO()
+                    df_procesado.to_csv(csv_buffer, index=False, encoding="utf-8-sig", sep=",", quotechar='"')
+                    csv_data = "\ufeff" + csv_buffer.getvalue()
+                    csv_buffer.close()
 
-        # Descargar Excel
-        st.download_button(
-            label="📥 Descargar Excel",
-            data=excel_output,
-            file_name=f"procesado_{file_name_base}.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
+                    st.download_button(
+                        label=f"📥 Descargar CSV de {archivo}",
+                        data=csv_data,
+                        file_name=f"{archivo.replace('.xlsx', '.csv').replace('.xls', '.csv')}",
+                        mime="text/csv"
+                    )
+
+
+
+                    st.download_button(
+                        label=f"📥 Descargar Excel de {archivo}",
+                        data=excel_output,
+                        file_name=f"{archivo.replace('.xlsx', '_procesado.xlsx').replace('.xls', '_procesado.xlsx')}",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    )
+        else:
+            st.warning("No se encontraron archivos Excel en la carpeta seleccionada.")
+    else:
+        st.error("La ruta ingresada no es válida. Verifique e intente nuevamente.")
