@@ -1,3 +1,4 @@
+
 import os
 import pandas as pd
 import streamlit as st
@@ -25,7 +26,7 @@ def ajustar_tallas(valor):
         try:
             inicio = lista_tallas.index(tallas[0])
             fin = lista_tallas.index(tallas[-1])
-            return "/".join(lista_tallas[inicio:fin+1])
+            return ",".join(lista_tallas[inicio:fin+1])
         except ValueError:
             return valor
 
