@@ -32,15 +32,14 @@ def ajustar_tallas(valor):
     return valor
 
 # Función para ajustar la columna "Enteros"
-def ajustar_enteros(valor_tallas, valor_enteros):
+def ajustar_enteros(valor_enteros):
+    # Si la columna "1/2#" contiene "Sí" o "Si", retorna ""
     if valor_enteros in ["Sí", "Si"]:
         return ""
+    # Si la columna "1/2#" contiene "No", retorna "solo enteros"
     if valor_enteros == "No":
-        if isinstance(valor_tallas, str) and "-" in valor_tallas:
-            partes = valor_tallas.replace("=\"", "").replace("\"", "").split("-")
-            if all(parte.isdigit() for parte in partes):
-                return "solo enteros"
-        return ""
+        return "solo enteros"
+    # Si tiene otro valor, retorna el mismo valor sin cambios
     return valor_enteros
 
 # Función para procesar el archivo
@@ -124,8 +123,6 @@ def limpiar_archivo(file):
             # Asegurar que solo se mantengan las columnas deseadas y que existan en df
             df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
 
-
-
         elif "accesorios" in file_name_lower:
             if "Articulo" in df.columns:
                 df["ID"] = df["Articulo"]  # Asigna Articulo a ID
@@ -176,6 +173,58 @@ def limpiar_archivo(file):
             # Asegurar que solo se mantengan las columnas deseadas y que existan en df
             df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
 
+        elif "urbano" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "Pag Ant", "Catalogo Anterior", "Descripción", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Prov",
+                "Tallas reales", "Equivalencia", "Corte", "Calzado = Suela Ropa = Composicion", "Forro",
+                "Altura Tacón / Alt Sin Plataforma", "Comprador", "Sección", "Seccion", "Tipo de Seguridad", "Publico Objetivo",
+                "Ubicación", "Calzado = Suela Ropa = Composicion"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen",
+                "RANGO DE TALLAS": "Tallas",
+                "1/2#": "Enteros"
+            }
+
+            ORDEN_COLUMNAS = ["ID", "Pag Act", "Marca Price", "Estilo Price", "Color", "Tallas", "Enteros", "@imagen", "Observacion"]
+
+        elif "caballeros" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "Descripción", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Price",
+                "Tallas reales", "Equivalencia", "Calzado = Suela Ropa = Composicion",
+                "Altura Tacón / Alt Sin Plataforma", "Comprador", "Sección", "Tipo de Seguridad", "Publico Objetivo",
+                "Ubicación", "Calzado = Suela Ropa = Composicion"
+            ]
+            MAPEADO_COLUMNAS = {
+                # "Articulo": "@imagen",
+                "RANGO DE TALLAS": "Tallas",
+                "1/2#": "Enteros"
+            }
+
+            ORDEN_COLUMNAS = ["Articulo", "V/N", "Pag Act", "Pag Ant", "Catalogo Anterior",
+                              "Marca Price", "Estilo Prov", "Color", "Tallas", "Enteros", "Corte", "Suela","Forro", "Plantilla", "Observacion"]
+
+        elif "confort" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "Descripción", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Price",
+                "Tallas reales", "Equivalencia",
+                "Comprador", "Sección", "Publico Objetivo",
+                "Ubicación", "Calzado = Suela Ropa = Composicion"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen",
+                "RANGO DE TALLAS": "Tallas",
+                "Tipo de Seguridad": "Suela",
+                "Calzado = Suela Ropa = Composicion": "Forro",
+                "1/2#": "Enteros"
+
+            }
+
+            ORDEN_COLUMNAS = ["ID", "@imagen", "V/N", "Pag Act","Marca Price",
+                               "Estilo Prov", "Color", "Tallas", "Enteros", "Corte", "Forro","Plantilla",
+                              "Suela", "Altura Tacón / Alt Sin Plataforma","Observacion"]
+
+
         else:
             st.warning(f"El archivo {file.name} no corresponde a los tipos esperados.")
             return None
@@ -185,7 +234,7 @@ def limpiar_archivo(file):
 
         # ✅ Insertar columna "ID" si no existe
         if "ID" not in df.columns:
-            df.insert(1, "ID", df.iloc[:, 0])
+            df.insert(1, "ID", df["Articulo"])
 
         # ✅ Renombrar columnas según el mapeo
         for columna_actual, nueva_columna in MAPEADO_COLUMNAS.items():
@@ -200,12 +249,33 @@ def limpiar_archivo(file):
             if "importados" in file_name_lower:
                 df["@foto"] = df["@foto"].astype(str) + ".psd"
 
-        # ✅ Ajustar tallas y enteros si las columnas existen
-        if "Tallas" in df.columns:
-            df["Tallas"] = df["Tallas"].apply(ajustar_tallas)
+        if "@imagen" in df.columns:
+            if "urbano" or "confort" in file_name_lower:
+                df["@imagen"] = df["@imagen"].astype(str) + ".psd"
 
-        if "Enteros" in df.columns and "Tallas" in df.columns:
-            df["Enteros"] = df.apply(lambda row: ajustar_enteros(row["Tallas"], row["Enteros"]), axis=1)
+        if "@foto" in df.columns:
+            if "sandalias" in file_name_lower:
+                df["@foto"] = df["@foto"].astype(str) + ".psd"
+
+        # ✅ Ajustar tallas y enteros si las columnas existen
+        # Aplicar la función `ajustar_enteros` a la columna "Enteros"
+        if "Enteros" in df.columns:
+            df["Enteros"] = df["Enteros"].astype(str).apply(ajustar_enteros)
+
+        # Asegurar que la columna "Tallas" tenga solo números enteros
+        if "Tallas" in df.columns:
+            df["Tallas"] = df["Tallas"].astype(str).str.replace('="', '', regex=False).str.replace('"', '', regex=False)
+
+        # Limpiar los .0 y mantener otros formatos intactos
+        df["Tallas"] = df["Tallas"].apply(lambda x: "-".join(
+            [str(int(float(t))) if t.replace(".0", "").isdigit() else t for t in x.split("-")]
+        ))
+        # ✅ Asegurar que "Plantilla" esté en el DataFrame aunque no exista en los datos originales
+        if "Plantilla" not in df.columns:
+            df["Plantilla"] = ""
+
+        # ✅ Reordenar nuevamente para incluir "Plantilla" en la posición correcta
+        df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
 
         return df
 
