@@ -65,3 +65,17 @@ if "botas" in file_name_lower:
                       "Observacion",
                       "@foto"
                       ]
+
+    # Crear el archivo Excel en memoria
+    excel_file = io.BytesIO()
+    with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
+        df_procesado.to_excel(writer, index=False, sheet_name="Hoja1")
+    excel_file.seek(0)  # Volver al inicio del archivo
+
+    # Botón para descargar el archivo Excel
+    st.download_button(
+        label="📥 Descargar Excel",
+        data=excel_file,
+        file_name=f"procesado_{file_name_base}.xlsx",
+        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )

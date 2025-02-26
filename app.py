@@ -8,7 +8,6 @@ st.title("📂 ETL de Dummys de Artículos para su integración hacia InDesign")
 st.write("Sube un archivo de Excel y procesa la información para generar un CSV limpio.")
 
 # Función para formatear tallas
-
 def ajustar_tallas(valor):
     if pd.isnull(valor):
         return ""
@@ -552,18 +551,6 @@ if uploaded_files:
                 mime="text/csv"
             )
 
-            # Crear el archivo Excel en memoria
-            excel_file = io.BytesIO()
-            with pd.ExcelWriter(excel_file, engine='xlsxwriter') as writer:
-                df_procesado.to_excel(writer, index=False, sheet_name="Hoja1")
-            excel_file.seek(0)  # Volver al inicio del archivo
 
-            # Botón para descargar el archivo Excel
-            st.download_button(
-                label="📥 Descargar Excel",
-                data=excel_file,
-                file_name=f"procesado_{file_name_base}.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
 
 
