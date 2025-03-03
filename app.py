@@ -40,6 +40,9 @@ def ajustar_enteros(valor_enteros):
     if valor_enteros == "No":
         return "solo enteros"
     return valor_enteros
+
+
+
 #Modificar descripcion del catalogo de botas
 def modificar_descripcion(descripcion):
     if isinstance(descripcion, float):
@@ -485,8 +488,10 @@ def limpiar_archivo(file):
 
         # Ajustar tallas y enteros si las columnas existen
         if "Enteros" in df.columns:
-            df["Enteros"] = df["Enteros"].astype(str).apply(ajustar_enteros)
-
+            if "Tallas" in df.columns and df["Tallas"].astype(str).str.contains("-").any():
+                df["Enteros"] = df["Enteros"].astype(str).apply(ajustar_enteros)
+            else:
+                return ""
 
         if "Tallas" in df.columns:
             df["Tallas"] = df["Tallas"].astype(str).apply(ajustar_tallas)
@@ -520,7 +525,7 @@ def limpiar_archivo(file):
 
         df.replace("**", "", inplace=True)
 
-
+        df.update(df.drop(columns=['@imagen'], errors='ignore').applymap(lambda x: x.upper() if isinstance(x, str) else x))
 
         # Reordenar nuevamente para incluir "Plantilla" en la posición correcta
         df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
