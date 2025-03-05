@@ -128,7 +128,7 @@ def limpiar_archivo(file):
             df.rename(columns={"ARTICULO": "Articulo"}, inplace=True)
 
         # Definir las palabras clave esperadas
-        palabras_clave = ["confort","man", "urbano","sandalias", "botas", "importados", "man", "accesorios"]
+        palabras_clave = ["confort","man", "urbano","sandalias", "botas", "importados", "man", "accesorios", "escolar", "mochilas"]
 
         # Eliminar espacios extras y normalizar el nombre del archivo
         file_name_lower = file.name.lower().strip()
@@ -447,7 +447,86 @@ def limpiar_archivo(file):
                 "Observacion",
                 "@imagen"
             ]
-
+         elif "escolar" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "Pag Ant",
+                "Catalogo Anterior",
+                "Descripción",
+                "Frase",
+                "Diseño",
+                "MARCA COMERCIAL",
+                "Estilo Price",
+                "Tallas reales",
+                "Equivalencia",
+                "Calzado = Suela Ropa = Composicion",
+                "Altura Tacón/Alt Sin Plataforma",
+                "Comprador",
+                "Publico Objetivo",
+                "Ubicacion"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen",
+                "RANGO DE TALLAS": "Tallas",
+                "1/2#": "Enteros",
+                "Marca Price": "Marca",
+                "Estilo Prov": "Estilo",
+                "Tipo de Seguridad": "Suela"
+            }
+            ORDEN_COLUMNAS = [
+                "ID",
+                "V/N",
+                "Pag Act",
+                "Marca",
+                "Estilo",
+                "Color",
+                "Tallas",  # "RANGO DE TALLAS",
+                "Enteros",
+                "Corte",
+                "Suela",
+                "Forro",
+                "Plantilla",
+                "Observacion",
+                "@imagen"
+            ]
+        elif "mochilas" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "Pag Ant",
+                "Catalogo Anterior",
+                "Frase",
+                "Diseño",
+                "MARCA COMERCIAL",
+                "Estilo Price",
+                "RANGO DE TALLAS",
+                "Equivalencia",
+                "1/2#",
+                "Corte",
+                "Calzado = Suela Ropa = Composicion",
+                "Forro",
+                "Altura Tacón/Alt Sin Plataforma",
+                "Observacion",
+                "Comprador",
+                "Seccion",
+                "Categoria",
+                "Tipo de Seguridad",
+                "Publico Objetivo",
+                "Ubicacion"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen",
+                "Marca Price": "Marca",
+                "Estilo Prov": "Estilo",
+                "Tallas reales": "Tallas"
+            }
+            ORDEN_COLUMNAS = [
+                "ID",
+                "V/N",
+                "Pag Act",
+                "Descripción",
+                "Marca",
+                "Estilo",
+                "Color",
+                "Tallas"
+            ]
         else:
             st.warning(f"El archivo '{file.name}' no coincide con los tipos esperados {palabras_clave}.")
             st.write(f"Nombre del archivo procesado: {file_name_lower}")
