@@ -1,10 +1,52 @@
 import os
 import pandas as pd
 import streamlit as st
+import re
 
 # Configuración de la app
 st.title("📂 ETL de Dummys de Artículos para su integración hacia InDesign")
 st.write("Sube un archivo de Excel y procesa la información para generar un CSV limpio.")
+
+accent_mapping_upper = {
+    "SINTETICO": "SINTÉTICO",
+    "CAFE": "CAFÉ",
+    "CARMIN": "CARMÍN",
+    "NEON": "NEÓN",
+    "TURQUESA": "TURQUESA",  # No requiere acento
+    "BALON": "BALÓN",
+    "AMBAR": "ÁMBAR",
+    "OSTION": "OSTIÓN",
+    "FIUSHA": "FIUSHA",  # Verifica si la forma correcta es esta o "FIUŠA" según el término que uses
+    "MARRON": "MARRÓN",
+    "INDIGO": "ÍNDIGO",
+    "PURPURA": "PÚRPURA",
+    "COMPOSICION": "COMPOSICIÓN",
+    "ALGODON": "ALGODÓN",
+    "POLIESTER": "POLIÉSTER",
+    "RAYON": "RAYÓN",
+    "ACRILICO": "ACRÍLICO",
+    "CANAMO": "CÁÑAMO",
+    "LYOCELL": "LYOCELL",  # Se escribe igual
+    "ETNICO": "ÉTNICO",
+    "MELON": "MELÓN",
+    "ELECTRICO": "ELÉCTRICO",
+    "SANDALO": "SÁNDALO",
+    "CINTURON": "CINTURÓN",
+    "BOXER": "BÓXER",
+    "UNICO": "ÚNICO",
+    "BATERIA": "BATERÍA",
+    "NACAR": "NÁCAR",
+    "METALICO": "METÁLICO",
+    "LASER": "LÁSER"
+}
+
+def agregar_tildes_upper(texto):
+    if not isinstance(texto, str):
+        return texto
+    # Recorremos el diccionario y usamos expresiones regulares para reemplazar palabras completas
+    for sin_acento, con_acento in accent_mapping_upper.items():
+        texto = re.sub(rf'\b{sin_acento}\b', con_acento, texto)
+    return texto
 # Función para formatear tallas
 def ajustar_tallas(valor):
     if pd.isnull(valor):
@@ -518,18 +560,13 @@ def limpiar_archivo(file):
         if "Altura" in df.columns:
             df["Altura"] = df["Altura"].apply(concatenar_altura)
 
+        if "Color" in df.columns:
+            df["Color"] = df["Color"].astype(str).apply(agregar_tildes_upper)
+
         df.replace("**", "", inplace=True)
 
-        if '@imagen' in df.columns:
-            imagen_col = df.pop('@imagen')  # Removemos la columna del DF y la guardamos
-
-            # Convertimos a mayúsculas el resto de las columnas (solo celdas de tipo str)
-            df = df.applymap(lambda x: x.upper() if isinstance(x, str) else x)
-
-            # Volvemos a insertar la columna @imagen sin cambios
-            df['@imagen'] = imagen_col
-        else:
-            df = df.applymap(lambda x: x.upper() if isinstance(x, str) else x)
+        df.update(df.drop(columns=['@imagen'], errors='ignore').applymap(
+            lambda x: x.upper() if isinstance(x, str) else x))
 
             # Reordenar nuevamente para incluir "Plantilla" en la posición correcta
         df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
@@ -558,8 +595,3 @@ if subir_archivos:
                 file_name=f"procesado_{file_name_base}.csv",
                 mime="text/csv"
             )
-
-
-
-
-
