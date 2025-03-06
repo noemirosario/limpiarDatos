@@ -560,6 +560,8 @@ def limpiar_archivo(file):
                     "urbano" in file_name_lower or
                     "confort" in file_name_lower or
                     "caballeros" in file_name_lower or
+                    "escolar" in file_name_lower or
+                    "mochilas" in file_name_lower or
                     "sandalias" in file_name_lower):
                 df["@imagen"] = df["@imagen"].astype(str) + ".psd"
 
