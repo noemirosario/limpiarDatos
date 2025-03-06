@@ -1,47 +1,123 @@
 import os
 import pandas as pd
 import streamlit as st
-import io
+import re
+import numpy as np
+from io import BytesIO
+
 
 # Configuración de la app
 st.title("📂 ETL de Dummys de Artículos para su integración hacia InDesign")
 st.write("Sube un archivo de Excel y procesa la información para generar un CSV limpio.")
 
-# Función para formatear tallas
+# Castaña, Coñac, Olivo, Frappe, Crema, Terracota, Latte
 
+diccionario_palabras = {
+    "SINTETICO": "SINTÉTICO",
+    "CAFE": "CAFÉ",
+    "CARMIN": "CARMÍN",
+    "NEON": "NEÓN",
+    "TURQUESA": "TURQUESA",  # No requiere acento
+    "BALON": "BALÓN",
+    "AMBAR": "ÁMBAR",
+    "OSTION": "OSTIÓN",
+    "FIUSHA": "FIUSHA",  # Verifica si la forma correcta es esta o "FIUŠA" según el término que uses
+    "MARRON": "MARRÓN",
+    "INDIGO": "ÍNDIGO",
+    "PURPURA": "PÚRPURA",
+    "COMPOSICION": "COMPOSICIÓN",
+    "ALGODON": "ALGODÓN",
+    "POLIESTER": "POLIÉSTER",
+    "RAYON": "RAYÓN",
+    "ACRILICO": "ACRÍLICO",
+    "CANAMO": "CÁÑAMO",
+    "LYOCELL": "LYOCELL",  # Se escribe igual
+    "ETNICO": "ÉTNICO",
+    "MELON": "MELÓN",
+    "ELECTRICO": "ELÉCTRICO",
+    "SANDALO": "SÁNDALO",
+    "CINTURON": "CINTURÓN",
+    "BOXER": "BÓXER",
+    "UNICO": "ÚNICO",
+    "BATERIA": "BATERÍA",
+    "NACAR": "NÁCAR",
+    "METALICO": "METÁLICO",
+    "LASER": "LÁSER"
+}
+
+def agregar_tildes_upper(texto):
+    if not isinstance(texto, str):
+        return texto
+    # Recorremos el diccionario y usamos expresiones regulares para reemplazar palabras completas
+    for sin_acento, con_acento in diccionario_palabras.items():
+        texto = re.sub(rf'\b{sin_acento}\b', con_acento, texto)
+    return texto
+
+# Función para formatear tallas
+def es_talla_numerica(valor_tallas):
+    if pd.isnull(valor_tallas):
+        return False
+    # Convierte a string
+    txt = str(valor_tallas).strip()
+    # Quita posibles '="' al inicio y '"' al final, p.e. '="7-10"'
+    txt = re.sub(r'^="|"$', '', txt)
+    # Reemplaza '-' por '/', para manejar rangos como '7-10'
+    txt = txt.replace('-', '/')
+    # Separa por '/'
+    partes = txt.split('/')
+    # Verifica que cada parte sea numérica (int o float)
+    for p in partes:
+        # Elimina un posible punto decimal para usar isdigit()
+        # o, si prefieres, podrías intentar un float(p) y atrapar ValueError
+        p_limpio = p.replace('.', '', 1)  # Solo un punto posible
+        if not p_limpio.isdigit():
+            return False
+    return True
 def ajustar_tallas(valor):
     if pd.isnull(valor):
         return ""
+
     valor = str(valor).replace("-", "/")
     tallas = valor.split("/")
 
-    # Verificar si el valor sigue el patrón de tallas de calzado
+    # Verificar si el valor sigue el patrón de tallas de calzado (numérico)
     if all(talla.replace(".", "").isdigit() for talla in tallas):
-        tallas = sorted(set(float(t) for t in tallas))  # Convertir a float, eliminar duplicados y ordenar
-        tallas = [str(int(t)) if t.is_integer() else str(t) for t in tallas]  # Convertir enteros a str sin decimales
-        return f'="{tallas[0]}-{tallas[-1]}"' if len(tallas) > 1 else f'="{tallas[0]}"'
+        # Convertir a float, eliminar duplicados y ordenar
+        tallas_float = sorted(set(float(t) for t in tallas))
+        # Convertir enteros a str sin decimales
+        tallas_str = [str(int(t)) if t.is_integer() else str(t) for t in tallas_float]
+        if len(tallas_str) > 1:
+            return f'="{tallas_str[0]}-{tallas_str[-1]}"'
+        else:
+            return f'="{tallas_str[0]}"'
 
+    # Lista de tallas tipo ropa
     lista_tallas = ["XXCH", "XCH", "CH", "M", "G", "XG", "XXG", "XXXG"]
 
+    # Verificar si son tallas de ropa en la lista y podemos "expandir"
     if tallas[0] in lista_tallas and tallas[-1] in lista_tallas:
         try:
             inicio = lista_tallas.index(tallas[0])
             fin = lista_tallas.index(tallas[-1])
-            return "/".join(lista_tallas[inicio:fin+1])
+            return "-".join(lista_tallas[inicio:fin+1])
         except ValueError:
             return valor
-
     return valor
-# Función para ajustar la columna Enteros
-def ajustar_enteros(valor_enteros):
+def ajustar_enteros(valor_enteros, valor_tallas):
     # Si la columna "1/2#" contiene "Sí" o "Si", retorna ""
     if valor_enteros in ["Sí", "Si"]:
         return ""
-    # Si la columna "1/2#" contiene "No", retorna "solo enteros"
+
+    # Si la columna "1/2#" contiene "No", revisamos si las tallas son numéricas
     if valor_enteros == "No":
-        return "solo enteros"
+        if es_talla_numerica(valor_tallas):
+            return "solo enteros"
+        else:
+            # Si no es numérico, devolvemos cadena vacía en lugar de "No"
+            return ""
+
+    # En cualquier otro caso, dejamos el valor tal cual
     return valor_enteros
-#Modificar descripcion del catalogo de botas
 def modificar_descripcion(descripcion):
     if isinstance(descripcion, float):
         descripcion = str(descripcion)
@@ -82,30 +158,75 @@ def modificar_suela(suela):
     else:
         return suela
 def extraer_palabra_plantilla(texto):
+    # Convertir a string si no es ya una cadena
+    if not isinstance(texto, str):
+        texto = str(texto)
     palabras = texto.split()  # Dividimos el texto en palabras
-    if 'PLANTILLA' in palabras and len(palabras) >= 3:  # Verificamos que hay al menos 3 palabras
-        return palabras[2]  # Devolvemos la palabra que sigue a "Plantilla"
-    return None  # Si no se encuentra "Plantilla" o no hay suficientes palabras, devolvemos None
-def limpiar_forro(texto):
+    if 'PLANTILLA' in palabras and len(palabras) >= 3:
+        return palabras[2]
+    return ""
+def limpiar_forro(texto, nombre_catalogo_min=""):
     if pd.isnull(texto):
         return texto
     texto = str(texto).replace('"', '').replace("'", "")
-
-    # Si el texto contiene una coma, quedarnos solo con lo que está antes de la coma
     if ',' in texto:
-        texto = texto.split(',')[0]  # Tomar solo la primera parte antes de la coma
+        texto = texto.split(',')[0]
+    texto = texto.strip()
 
-    return texto.strip()  # Eliminar espacios extra al principio y al final
+    # Convertir nombre_catalogo_min a minúsculas para consistencia
+    nombre_catalogo_min = nombre_catalogo_min.lower()
 
+    # Si el nombre del archivo contiene "botas" o "confort", solo se permite "PIEL"
+    if "botas" in nombre_catalogo_min or "confort" in nombre_catalogo_min or "escolar" in nombre_catalogo_min or "caballeros" in nombre_catalogo_min:
+        if texto.upper() == "PIEL":
+            return "PIEL"
+        else:
+            return ""
+
+    return texto
 def limpiar_observacion_plantilla(observacion):
-    # Comprobamos si "Plantilla" está presente en el texto, sin importar mayúsculas/minúsculas
-    if isinstance(observacion, float):
-        observacion = str(observacion)
+    # Si observacion es nula, retorna cadena vacía
+    if observacion is None:
+        return ""
+    # Convertir a cadena en caso de que no lo sea
+    observacion = str(observacion)
+    # Verificar si "plantilla" está presente, ignorando mayúsculas/minúsculas y espacios extras
     if "plantilla" in observacion.strip().lower():
-        return ""  # Si contiene la palabra "Plantilla", retornamos una cadena vacía
+        return ""
     else:
-        return observacion  # Si no contiene "Plantilla", retornamos el valor original
+        return observacion
+def separar_composicion_custom(texto):
+    # Verifica que sea string
+    if not isinstance(texto, str):
+        return texto
 
+    # Limpieza previa: quitar comillas dobles y comas
+    texto = texto.replace('"', '')
+    texto = texto.replace(",", "")
+
+    # 1. Insertar un espacio después de "%" si no existe.
+    texto = re.sub(r'(%)(\S)', r'\1 \2', texto)
+    # 2. Reemplazar "/" por espacio.
+    texto = texto.replace("/", " ")
+
+    # Dividir en tokens
+    tokens = texto.split()
+    bloques = []
+    bloque_actual = []
+
+    for token in tokens:
+        # Cada token que contiene "%" inicia un nuevo bloque
+        if "%" in token:
+            if bloque_actual:
+                bloques.append(" ".join(bloque_actual))
+            bloque_actual = [token]
+        else:
+            bloque_actual.append(token)
+    if bloque_actual:
+        bloques.append(" ".join(bloque_actual))
+
+    resultado = ", ".join(bloques)
+    return resultado
 def limpiar_archivo(file):
     try:
         df = pd.read_excel(file, engine="openpyxl", skiprows=4)
@@ -128,17 +249,17 @@ def limpiar_archivo(file):
             df.rename(columns={"ARTICULO": "Articulo"}, inplace=True)
 
         # Definir las palabras clave esperadas
-        palabras_clave = ["confort","man", "urbano","sandalias", "botas", "importados", "man", "accesorios", "escolar", "mochilas", "navidad", "vestir casual"]
+        nombres_catalogos = ["confort","man", "urbano","sandalias", "botas", "importados", "man", "accesorios", "vestir casual", "mochilas", "escolar", "navidad"]
 
         # Eliminar espacios extras y normalizar el nombre del archivo
-        file_name_lower = file.name.lower().strip()
+        nombre_catalogo_min = file.name.lower().strip()
 
         # Reemplazar múltiples espacios por uno solo (por si hay espacios dobles)
-        file_name_lower = " ".join(file_name_lower.split())
+        nombre_catalogo_min = " ".join(nombre_catalogo_min.split())
 
-        file_name_lower = file.name.lower()  # Convertir a minúsculas
+        nombre_catalogo_min = file.name.lower()  # Convertir a minúsculas
 
-        if "sandalias" in file_name_lower:
+        if "sandalias" in nombre_catalogo_min or "vestir casual" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "Descripción",
                 "Frase",
@@ -176,7 +297,7 @@ def limpiar_archivo(file):
                 "@imagen"
             ]
 
-        elif "botas" in file_name_lower:
+        elif "botas" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "Frase",
                 "Diseño",
@@ -219,12 +340,12 @@ def limpiar_archivo(file):
             if "Descripción" in df.columns:
                 df["Descripción"] = df["Descripción"].apply(modificar_descripcion)
 
-        elif "importados" in file_name_lower:
+        elif "importados" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "Pag Ant", "Catalogo Anterior", "Descripción", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Price",
                 "Tallas reales", "Equivalencia", "Corte", "Calzado = Suela Ropa = Composicion", "Forro",
                 "Altura Tacón / Alt Sin Plataforma", "Comprador", "Sección", "Seccion", "Tipo de Seguridad", "Publico Objetivo",
-                "Ubicación", "Calzado = Suela Ropa = Composicion"
+                "Ubicación"
             ]
             MAPEADO_COLUMNAS = {
                 "Articulo": "@imagen",
@@ -236,53 +357,77 @@ def limpiar_archivo(file):
             }
             ORDEN_COLUMNAS = ["@imagen", "ID", "Categoria", "Marca", "Estilo", "Color", "Tallas", "Enteros", "Modelo", "V/N", "Pag Act"]
 
-        elif "man" in file_name_lower:
+        elif "man" in nombre_catalogo_min:
+
             if "Articulo" in df.columns:
                 df["ID"] = df["Articulo"]  # Asigna Articulo a ID
+
                 df["@imagen"] = df["Articulo"].astype(str) + ".tif"  # Genera @imagen correctamente
 
             COLUMNAS_A_ELIMINAR = [
+
                 "Articulo", "V/N", "Pag Ant", "Catalogo Anterior", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Price",
+
                 "Tallas reales", "Equivalencia", "1/2#", "Corte", "Altura Tacón / Alt Sin Plataforma", "Observacion",
+
                 "Comprador", "Seccion", "Categoria", "Tipo de Seguridad", "Publico Objetivo"
+
             ]
 
             MAPEADO_COLUMNAS = {
+
                 "Pag Act": "Pag",
+
                 "Estilo Prov": "Mod",
+
                 "Marca Price": "Marca",
+
                 "Descripción": "Rubro",  # SOLO SE ASIGNA UNA VEZ
+
                 "Color": "Color",
+
                 "RANGO DE TALLAS": "Tallas",
-                "Calzado = Suela Ropa = Composicion": "Compo",
+
+                "Calzado = Suela Ropa = Composicion": "Composicion",
+
                 "Forro": "Forro",
+
                 "Ubicación": "@Ubicación"
+
             }
 
             # Aplicar el mapeo de nombres de columnas
+
             df.rename(columns=MAPEADO_COLUMNAS, inplace=True)
 
             # Eliminar columnas innecesarias
+
             df.drop(columns=[col for col in COLUMNAS_A_ELIMINAR if col in df.columns], inplace=True)
 
             # Duplicar la columna "Rubro" en "Observacion 1"
+
             if "Rubro" in df.columns:
                 df["Observacion 1"] = df["Rubro"]
 
             # Asegurar que COMPO y FORRO estén entre comillas si contienen comas
-            if "Compo" in df.columns:
-                df["Compo"] = df["Compo"].apply(lambda x: f'"{x}"' if "," in str(x) else x)
+
+            if "Composicion" in df.columns:
+                df["Composicion"] = df["Composicion"].apply(lambda x: f'"{x}"' if "," in str(x) else x)
+
             if "Forro" in df.columns:
                 df["Forro"] = df["Forro"].apply(lambda x: f'"{x}"' if "," in str(x) else x)
 
             # Definir el orden de las columnas en la salida
-            ORDEN_COLUMNAS = ["@imagen", "Pag", "ID", "Mod", "Marca", "Rubro", "Color", "Tallas", "Compo", "Forro",
+
+            ORDEN_COLUMNAS = ["@imagen", "Pag", "ID", "Mod", "Marca", "Rubro", "Color", "Tallas", "Composicion", "Forro",
+
                               "@Ubicación", "Observacion 1", "Observacion 2"]
 
             # Asegurar que solo se mantengan las columnas deseadas y que existan en df
+
             df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
 
-        elif "accesorios" in file_name_lower:
+        elif "accesorios" in nombre_catalogo_min:
             if "Articulo" in df.columns:
                 df["ID"] = df["Articulo"]  # Asigna Articulo a ID
 
@@ -301,7 +446,7 @@ def limpiar_archivo(file):
                 "Marca Price": "Marca",
                 "Descripción": "Rubro",
                 "Color": "Color",
-                "Calzado = Suela Ropa = Composicion": "Compo"
+                "Calzado = Suela Ropa = Composicion": "Composicion"
             }
 
             # Aplicar el mapeo de nombres de columnas
@@ -322,17 +467,17 @@ def limpiar_archivo(file):
             if "Rubro" in df.columns:
                 df["Observacion"] = df["Rubro"]
 
-            # Asegurar que COMPO esté entre comillas si contiene comas
-            if "Compo" in df.columns:
-                df["Compo"] = df["Compo"].apply(lambda x: f'"{x}"' if "," in str(x) else x)
+            # Asegurar que Composicion esté entre comillas si contiene comas
+            if "Composicion" in df.columns:
+                df["Composicion"] = df["Composicion"].apply(lambda x: f'"{x}"' if "," in str(x) else x)
 
             # Definir el orden de las columnas en la salida
-            ORDEN_COLUMNAS = ["@imagen", "Pag", "ID", "Mod", "Marca", "Rubro", "Color", "Compo", "Observacion"]
+            ORDEN_COLUMNAS = ["@imagen", "Pag", "ID", "Mod", "Marca", "Rubro", "Color", "Composicion", "Observacion"]
 
             # Asegurar que solo se mantengan las columnas deseadas y que existan en df
             df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
 
-        elif "urbano" in file_name_lower:
+        elif "urbano" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "Pag Ant", "Catalogo Anterior", "Descripción", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Prov",
                 "Tallas reales", "Equivalencia", "Corte", "Calzado = Suela Ropa = Composicion", "Forro",
@@ -343,12 +488,12 @@ def limpiar_archivo(file):
                 "Articulo": "@imagen",
                 "Marca Price": "Marca",
                 "RANGO DE TALLAS": "Tallas",
-                "Estilo Price": "Estilo",
+                "Estilo Price": "Estilo Prov",
                 "1/2#": "Enteros"
             }
-            ORDEN_COLUMNAS = ["ID", "Pag Act", "Marca", "Estilo", "Color", "Tallas", "Enteros", "@imagen", "Observacion"]
+            ORDEN_COLUMNAS = ["ID", "Pag Act", "Marca", "Estilo", "Color", "Tallas", "Enteros Prov", "@imagen", "Observacion"]
 
-        elif "caballeros" in file_name_lower:
+        elif "caballeros" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "Descripción", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Price",
                 "Tallas reales", "Equivalencia",
@@ -383,13 +528,20 @@ def limpiar_archivo(file):
                   "@imagen"
             ]
 
-        elif "confort" in file_name_lower:
+        elif "confort" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
-                "Descripción", "Frase", "Diseño", "MARCA COMERCIAL", "Estilo Price",
-                "Tallas reales", "Equivalencia",
-                "Comprador", "Sección", "Publico Objetivo",
-                "Ubicación", "Calzado = Suela Ropa = Composicion",
-
+                "Descripción",
+                "Frase",
+                "Diseño",
+                "MARCA COMERCIAL",
+                "Estilo Price",
+                "Tallas reales",
+                "Equivalencia",
+                "Comprador",
+                "Sección",
+                "Publico Objetivo",
+                "Ubicación",
+                "Calzado = Suela Ropa = Composicion"
             ]
             MAPEADO_COLUMNAS = {
                 "Articulo": "@imagen",
@@ -400,95 +552,110 @@ def limpiar_archivo(file):
                 "Calzado = Suela Ropa = Composicion": "Forro",
                 "1/2#": "Enteros",
                 "Altura Tacón / Alt Sin Plataforma": "Altura"
-
-
             }
 
-            ORDEN_COLUMNAS = ["ID", "@imagen", "V/N", "Pag Act","Marca",
-                               "Estilo", "Color", "Tallas", "Enteros", "Corte", "Forro","Plantilla",
-                              "Suela", "Altura","Observacion"]
-
-        elif "sandalias" in file_name_lower:
-            COLUMNAS_A_ELIMINAR = [
-                "Descripción",
-                "Frase",
-                "Diseño",
-                "MARCA COMERCIAL",
-                "Estilo Price",
-                "Tallas reales",
-                "Equivalencia",
-                "Calzado = Suela Ropa = Composicion"
-            ]
-            MAPEADO_COLUMNAS = {
-                "Articulo": "@imagen",
-                "RANGO DE TALLAS": "Tallas",
-                "1/2#": "Enteros",
-                "Marca Price": "Marca",
-                "Estilo Prov": "Estilo",
-                "Tipo de Seguridad": "Suela",
-                "Altura Tacón / Alt Sin Plataforma": "Altura"
-            }
             ORDEN_COLUMNAS = [
                 "ID",
-                "V/N",
-                "Pag Act",
-                "Pag Ant",
-                "Catalogo Anterior",
-                "Marca",
-                "Estilo",
-                "Color",
-                "Tallas",  # "RANGO DE TALLAS",
-                "Enteros",
-                "Corte",
-                "Suela",
-                "Plantilla",
-                "Forro",
-                "Altura",
-                "Observacion",
-                "@imagen"
+                  "@imagen",
+                  "V/N",
+                  "Pag Act",
+                  "Marca",
+                   "Estilo",
+                  "Color",
+                  "Tallas",
+                  "Enteros",
+                  "Corte",
+                  "Forro",
+                  "Plantilla",
+                  "Suela",
+                  "Altura",
+                  "Observacion"
             ]
-         elif "escolar" in file_name_lower:
+
+        elif "escolar" in nombre_catalogo_min:
+
             COLUMNAS_A_ELIMINAR = [
+
                 "Pag Ant",
+
                 "Catalogo Anterior",
+
                 "Descripción",
+
                 "Frase",
+
                 "Diseño",
+
                 "MARCA COMERCIAL",
+
                 "Estilo Price",
+
                 "Tallas reales",
+
                 "Equivalencia",
+
                 "Calzado = Suela Ropa = Composicion",
+
                 "Altura Tacón/Alt Sin Plataforma",
+
                 "Comprador",
+
                 "Publico Objetivo",
+
                 "Ubicacion"
+
             ]
+
             MAPEADO_COLUMNAS = {
+
                 "Articulo": "@imagen",
+
                 "RANGO DE TALLAS": "Tallas",
+
                 "1/2#": "Enteros",
+
                 "Marca Price": "Marca",
+
                 "Estilo Prov": "Estilo",
+
                 "Tipo de Seguridad": "Suela"
+
             }
+
             ORDEN_COLUMNAS = [
+
                 "ID",
+
                 "V/N",
+
                 "Pag Act",
+
                 "Marca",
+
                 "Estilo",
+
                 "Color",
+
                 "Tallas",  # "RANGO DE TALLAS",
+
                 "Enteros",
+
                 "Corte",
+
                 "Suela",
+
                 "Forro",
+
                 "Plantilla",
+
                 "Observacion",
+
                 "@imagen"
+
             ]
-        elif "mochilas" in file_name_lower:
+
+        elif "mochilas" in nombre_catalogo_min:
+
             COLUMNAS_A_ELIMINAR = [
                 "Pag Ant",
                 "Catalogo Anterior",
@@ -511,12 +678,14 @@ def limpiar_archivo(file):
                 "Publico Objetivo",
                 "Ubicacion"
             ]
+
             MAPEADO_COLUMNAS = {
                 "Articulo": "@imagen",
                 "Marca Price": "Marca",
                 "Estilo Prov": "Estilo",
                 "Tallas reales": "Tallas"
             }
+
             ORDEN_COLUMNAS = [
                 "ID",
                 "V/N",
@@ -527,154 +696,112 @@ def limpiar_archivo(file):
                 "Color",
                 "Tallas"
             ]
-                elif "navidad" in file_name_lower:
+
+        elif "navidad" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "Pag Ant",
                 "Catalogo Anterior",
-                "Frase", 
+                "Frase",
                 "Diseño",
                 "MARCA COMERCIAL",
                 "Estilo Price",
                 "Tallas reales",
                 "Equivalencia",
                 "1/2#",
+                "Corte",
                 "Calzado = Suela Ropa = Composicion",
                 "Forro",
-                "Altura Tacón/Alt Sin Plataforma",
+                "Altura Tacón / Alt Sin Plataforma",
                 "Observacion",
                 "Comprador",
                 "Seccion",
                 "Categoria",
                 "Tipo de Seguridad",
                 "Publico Objetivo",
-                "Ubicacion"
+                "Ubicación"
             ]
+
             MAPEADO_COLUMNAS = {
-                "Articulo": "@imagen", 
+                "Articulo": "@imagen",
                 "Marca Price": "Marca",
                 "Estilo Prov": "Estilo",
                 "RANGO DE TALLAS": "Tallas"
             }
-            ORDEN_COLUMNAS = [
-                "ID", 
-                "V/N", 
-                "Pag Act", 
-                "Descripcion",
-                "Marca",
-                "Estilo",
-                "Color",
-                "Tallas",
-                "@imagen"
-            ]
-        elif "vestir casual" in file_name_lower:
-            COLUMNAS_A_ELIMINAR = [
-                "Pag Ant",
-                "Descripcion",
-                "Frase", 
-                "Diseño",
-                "MARCA COMERCIAL",
-                "Estilo Price",
-                "Tallas reales",
-                "Equivalencia",
-                "Calzado = Suela Ropa = Composicion",
-                "Comprador",
-                "Seccion",
-                "Categoria",
-                "Tipo de Seguridad",
-                "Publico Objetivo",
-                "Ubicacion"
-            ]
-            MAPEADO_COLUMNAS = {
-                "Articulo": "@imagen",
-                "Catalogo Anterior": "Catalogo Ant",
-                "Marca Price": "Marca",
-                "Estilo Prov": "Estilo",
-                "RANGO DE TALLAS": "Tallas",
-                "1/2#": "Enteros",
-                "Altura Tacón/Alt Sin Plataforma": "Altura"
-            }
+
             ORDEN_COLUMNAS = [
                 "ID",
                 "V/N",
                 "Pag Act",
-                "Catalogo Ant",
+                "Descripción",
                 "Marca",
                 "Estilo",
                 "Color",
                 "Tallas",
-                "Enteros",
-                "Corte",
-                "Suela",
-                "Forro",
-                "Altura",
-                "Observacion",
                 "@imagen"
             ]
+
         else:
-            st.warning(f"El archivo '{file.name}' no coincide con los tipos esperados {palabras_clave}.")
-            st.write(f"Nombre del archivo procesado: {file_name_lower}")
+            st.warning(f"El archivo '{file.name}' no coincide con los tipos esperados {nombres_catalogos}.")
+            st.write(f"Nombre del archivo procesado: {nombre_catalogo_min}")
 
             return None
 
         # Eliminar columnas innecesarias
         df.drop(columns=[col for col in COLUMNAS_A_ELIMINAR if col in df.columns], inplace=True, errors='ignore')
 
-        # Reemplazar NaN en la columna Observacion con una cadena vacía
         if "Observacion" in df.columns:
             df["Observacion"] = df["Observacion"].fillna("")
 
-
-        # Insertar columna "ID" si no existe
         if "ID" not in df.columns:
-            df.insert(1, "ID", df["Articulo"])
+            df.insert(1, "ID", pd.to_numeric(df["Articulo"], errors="coerce")
+                      .replace([np.inf, -np.inf], 0)
+                      .fillna(0)
+                      .astype(int))
 
-        # Renombrar columnas según el mapeo
         for columna_actual, nueva_columna in MAPEADO_COLUMNAS.items():
             if columna_actual in df.columns:
                 df.rename(columns={columna_actual: nueva_columna}, inplace=True)
 
-        # Reordenar columnas asegurando que existan en el DataFrame
         df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
 
-        # Ajustar formato de la columna "@imagen"
         if "@imagen" in df.columns:
-            if ("importados" in file_name_lower or
-                    "botas" in file_name_lower or
-                    "urbano" in file_name_lower or
-                    "confort" in file_name_lower or
-                    "caballeros" in file_name_lower or
-                    "escolar" in file_name_lower or
-                    "mochilas" in file_name_lower or
-                    "navidad" in file_name_lower or
-                    "vestir casual" in file_name_lower or
-                    "sandalias" in file_name_lower):
-                df["@imagen"] = df["@imagen"].astype(str) + ".psd"
-
-        # Ajustar tallas y enteros si las columnas existen
-        if "Enteros" in df.columns:
-            df["Enteros"] = df["Enteros"].astype(str).apply(ajustar_enteros)
-
+            if ("importados" in nombre_catalogo_min or
+                    "botas" in nombre_catalogo_min or
+                    "urbano" in nombre_catalogo_min or
+                    "confort" in nombre_catalogo_min or
+                    "caballeros" in nombre_catalogo_min or
+                    "escolar" in nombre_catalogo_min or
+                    "navidad" in nombre_catalogo_min or
+                    "sandalias" in nombre_catalogo_min):
+                df["@imagen"] = pd.to_numeric(df["@imagen"], errors='coerce').fillna(0).astype(int).astype(str) + ".psd"
 
         if "Tallas" in df.columns:
             df["Tallas"] = df["Tallas"].astype(str).apply(ajustar_tallas)
-            #df["Tallas"] = df["Tallas"].astype(str).str.replace('="', '', regex=False).str.replace('"', '', regex=False)
-            #df["Tallas"] = df["Tallas"].apply(lambda x: "-".join(
-            #   [str(int(float(t))) if t.replace(".0", "").isdigit() else t for t in x.split("-")]
-            #))
 
-        # Asegurar que "Plantilla" esté en el DataFrame aunque no exista en los datos originales
-        if "Plantilla" in df.columns:
-            df["Plantilla"] = ""
+        if "Enteros" in df.columns and "Tallas" in df.columns:
+            df["Enteros"] = df.apply(lambda row: ajustar_enteros(row["Enteros"], row["Tallas"]), axis=1)
 
-        # Verificar si la columna "Plantilla" está presente
-        if "Plantilla" in df.columns:
-            # Buscar la palabra clave en las columnas "Calzado", "Ropa" y "Observacion" para extraer la plantilla
+        if "Plantilla" in ORDEN_COLUMNAS:  # Verifica si 'Plantilla' se espera en el orden final
+            # Crear la columna "Plantilla" si no existe
+            if "Plantilla" not in df.columns:
+                df["Plantilla"] = ""
+            # Recorrer las columnas que pueden aportar valor a "Plantilla"
             for columna in ['Forro', 'Calzado = Suela Ropa = Composicion', 'Observacion']:
                 if columna in df.columns:
-                    df['Plantilla'] = df[columna].apply(extraer_palabra_plantilla)
+                    # Aquí se sobreescribe la columna "Plantilla" en cada iteración.
+                    # Si lo que deseas es combinar resultados, tal vez necesites concatenar o condicionar la asignación.
+                    df["Plantilla"] = df[columna].apply(extraer_palabra_plantilla)
 
+            df["Plantilla"] = df["Plantilla"].fillna("")
+
+        # Procesar la columna "Forro"
         if "Forro" in df.columns:
-            df["Forro"] = df["Forro"].apply(limpiar_forro)
+            if "botas" in nombre_catalogo_min or "confort" in nombre_catalogo_min or "escolar" in nombre_catalogo_min or "caballeros" in nombre_catalogo_min:
+                df["Forro"] = df["Forro"].apply(lambda x: limpiar_forro(x, nombre_catalogo_min))
+            else:
+                df["Forro"] = df["Forro"].apply(limpiar_forro)
+        else:
+            df["Forro"] = ""
 
         if "Observacion" in df.columns:
             df["Observacion"] = df["Observacion"].apply(limpiar_observacion_plantilla)
@@ -685,31 +812,50 @@ def limpiar_archivo(file):
         if "Altura" in df.columns:
             df["Altura"] = df["Altura"].apply(concatenar_altura)
 
+        if "Color" in df.columns:
+            df["Color"] = df["Color"].astype(str).apply(agregar_tildes_upper)
+
+
         df.replace("**", "", inplace=True)
 
+        df.update(
+            df.drop(columns=['@imagen', 'Altura'], errors='ignore')
+            .applymap(lambda x: x.upper() if isinstance(x, str) else x)
+        )
 
+        if "Composicion" in df.columns:
+            df["Composicion"] = (
+                df["Composicion"]
+                .astype(str)
+                .apply(lambda x: "" if x.strip().lower() in ["nan", "nan."] else separar_composicion_custom(x))
+            )
 
-        # Reordenar nuevamente para incluir "Plantilla" en la posición correcta
+        if "Forro" in df.columns:
+            df["Forro"] = (
+                df["Forro"]
+                .astype(str)
+                .apply(lambda x: "" if x.strip().lower() in ["nan", "nan."]
+                else separar_composicion_custom(limpiar_forro(x)))
+            )
+
         df = df[[col for col in ORDEN_COLUMNAS if col in df.columns]]
-
         return df
 
     except Exception as e:
         st.error(f"Error al procesar el archivo {file.name}: {e}")
         return None
 
-# Subir archivos Excel
-uploaded_files = st.file_uploader("Sube uno o más archivos Excel", type=["xlsx"], accept_multiple_files=True)
+subir_archivos = st.file_uploader("Sube uno o más archivos Excel o CSV", type=["xlsx", "csv"], accept_multiple_files=True)
 
-if uploaded_files:
-    for file in uploaded_files:
+if subir_archivos:
+    for file in subir_archivos:
         df_procesado = limpiar_archivo(file)
         if df_procesado is not None:
             st.write(f"Vista previa de: {file.name}")
             st.dataframe(df_procesado)
-
-            # Descargar CSV
             file_name_base = os.path.splitext(file.name)[0]
+
+            # Generar CSV
             csv = df_procesado.to_csv(index=False).encode("utf-8-sig")
             st.download_button(
                 label="📥 Descargar CSV",
@@ -718,6 +864,17 @@ if uploaded_files:
                 mime="text/csv"
             )
 
+            # Generar XLSX
+            output = BytesIO()
+            with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                df_procesado.to_excel(writer, index=False, sheet_name='Sheet1')
+            xlsx_data = output.getvalue()
+            st.download_button(
+                label="📥 Descargar XLSX",
+                data=xlsx_data,
+                file_name=f"procesado_{file_name_base}.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
             
 
 
