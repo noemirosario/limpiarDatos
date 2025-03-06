@@ -128,7 +128,7 @@ def limpiar_archivo(file):
             df.rename(columns={"ARTICULO": "Articulo"}, inplace=True)
 
         # Definir las palabras clave esperadas
-        palabras_clave = ["confort","man", "urbano","sandalias", "botas", "importados", "man", "accesorios", "escolar", "mochilas"]
+        palabras_clave = ["confort","man", "urbano","sandalias", "botas", "importados", "man", "accesorios", "escolar", "mochilas", "navidad", "vestir casual"]
 
         # Eliminar espacios extras y normalizar el nombre del archivo
         file_name_lower = file.name.lower().strip()
@@ -527,6 +527,89 @@ def limpiar_archivo(file):
                 "Color",
                 "Tallas"
             ]
+                elif "navidad" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "Pag Ant",
+                "Catalogo Anterior",
+                "Frase", 
+                "Diseño",
+                "MARCA COMERCIAL",
+                "Estilo Price",
+                "Tallas reales",
+                "Equivalencia",
+                "1/2#",
+                "Calzado = Suela Ropa = Composicion",
+                "Forro",
+                "Altura Tacón/Alt Sin Plataforma",
+                "Observacion",
+                "Comprador",
+                "Seccion",
+                "Categoria",
+                "Tipo de Seguridad",
+                "Publico Objetivo",
+                "Ubicacion"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen", 
+                "Marca Price": "Marca",
+                "Estilo Prov": "Estilo",
+                "RANGO DE TALLAS": "Tallas"
+            }
+            ORDEN_COLUMNAS = [
+                "ID", 
+                "V/N", 
+                "Pag Act", 
+                "Descripcion",
+                "Marca",
+                "Estilo",
+                "Color",
+                "Tallas",
+                "@imagen"
+            ]
+        elif "vestir casual" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "Pag Ant",
+                "Descripcion",
+                "Frase", 
+                "Diseño",
+                "MARCA COMERCIAL",
+                "Estilo Price",
+                "Tallas reales",
+                "Equivalencia",
+                "Calzado = Suela Ropa = Composicion",
+                "Comprador",
+                "Seccion",
+                "Categoria",
+                "Tipo de Seguridad",
+                "Publico Objetivo",
+                "Ubicacion"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen",
+                "Catalogo Anterior": "Catalogo Ant",
+                "Marca Price": "Marca",
+                "Estilo Prov": "Estilo",
+                "RANGO DE TALLAS": "Tallas",
+                "1/2#": "Enteros",
+                "Altura Tacón/Alt Sin Plataforma": "Altura"
+            }
+            ORDEN_COLUMNAS = [
+                "ID",
+                "V/N",
+                "Pag Act",
+                "Catalogo Ant",
+                "Marca",
+                "Estilo",
+                "Color",
+                "Tallas",
+                "Enteros",
+                "Corte",
+                "Suela",
+                "Forro",
+                "Altura",
+                "Observacion",
+                "@imagen"
+            ]
         else:
             st.warning(f"El archivo '{file.name}' no coincide con los tipos esperados {palabras_clave}.")
             st.write(f"Nombre del archivo procesado: {file_name_lower}")
@@ -562,6 +645,8 @@ def limpiar_archivo(file):
                     "caballeros" in file_name_lower or
                     "escolar" in file_name_lower or
                     "mochilas" in file_name_lower or
+                    "navidad" in file_name_lower or
+                    "vestir casual" in file_name_lower or
                     "sandalias" in file_name_lower):
                 df["@imagen"] = df["@imagen"].astype(str) + ".psd"
 
