@@ -249,7 +249,9 @@ def limpiar_archivo(file):
             df.rename(columns={"ARTICULO": "Articulo"}, inplace=True)
 
         # Definir las palabras clave esperadas
-        nombres_catalogos = ["confort","man", "urbano","sandalias", "botas", "importados", "man", "accesorios", "vestir casual", "mochilas", "escolar", "navidad"]
+        nombres_catalogos = ["confort","man", "urbano","sandalias", "botas", "importados",
+                             "man", "accesorios", "vestir casual", "mochilas", "escolar",
+                             "navidad", "abrigador", "basicos", "ella"]
 
         # Eliminar espacios extras y normalizar el nombre del archivo
         nombre_catalogo_min = file.name.lower().strip()
@@ -739,7 +741,154 @@ def limpiar_archivo(file):
                 "Tallas",
                 "@imagen"
             ]
+        elif "abrigador" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "V/N",
+                "Pag Ant",
+                "Catalogo Anterior",
+                "Frase",
+                "Diseño",
+                "MARCA COMERCIAL",
+                "Estilo Price",
+                "RANGO DE TALLAS",
+                "Equivalencia",
+                "1/2#",
+                "Corte",
+                "Altura Tacon/Alt Sin Plataforma",
+                "Comprador",
+                "Seccion",
+                "Categoria",
+                "Tipo de Seguridad",
+                "Publico Objetivo"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen",
+                "Marca Price": "Marca",
+                "Estilo Prov": "Estilo",
+                "Descripción": "Rubro",
+                "Tallas reales": "Tallas",
+                "Calzado = Suela Ropa = Composicion": "Compo"
+            }
 
+            # Genera @ubicacion y @imagen correctamente como número entero sin decimales
+            df["@ubicacion"] = df["Ubicación"].astype(str).str.split('.').str[0] + ".eps"
+
+            #if "@imagen" in df.columns:
+             #   df["@imagen"] = df["@imagen"].astype(str) + ".tif"
+           # if "Rubro" in df.columns:
+             #   df["Observacion 1"] = df["Rubro"]
+
+            ORDEN_COLUMNAS = [
+                "@imagen",
+                "Pag Act",
+                "ID",
+                "Estilo",
+                "Marca",
+                "Rubro",
+                "Color",
+                "Tallas",
+                "Compo",
+                "Forro",
+                "@ubicacion",
+                "Observacion",
+                "Observacion 1"
+            ]
+        elif "basicos" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "V/N",
+                "Pag Ant",
+                "Catalogo Anterior",
+                "Frase",
+                "Proveedor",
+                "Estilo Price",
+                "Talla",
+                "Equivalencia",
+                "Corrida",
+                "1/2#",
+                "Corte",
+                "Altura Tacon/Alt Sin Plataforma",
+                "Observacion",
+                "Comprador",
+                "Seccion",
+                "Categoria",
+                "Atributo",
+                "Tipo de Seguridad",
+                "Publico Objetivo"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen",
+                "Marca Price": "Marca",
+                "Estilo Prov": "Estilo",
+                "Descripción": "Rubro",
+                "Tallas reales": "Tallas",
+                "Calzado = Suela Ropa = Composicion": "Compo"
+            }
+
+            # Genera @ubicacion y @imagen correctamente como número entero sin decimales
+            df["@ubicacion"] = df["Ubicación"].astype(str).str.split('.').str[0] + ".eps"
+
+            ORDEN_COLUMNAS = [
+                "@imagen",
+                "Pag Act",
+                "ID",
+                "Estilo",
+                "Marca",
+                "Rubro",
+                "Color",
+                "Tallas",
+                "Compo",
+                "Forro",
+                "@ubicacion",
+                "Observacion"
+            ]
+        elif "ella" in file_name_lower:
+            COLUMNAS_A_ELIMINAR = [
+                "V/N",
+                "Pag Ant",
+                "Catalogo Anterior",
+                "Frase",
+                "Proveedor",
+                "Estilo Price",
+                "Talla",
+                "Equivalencia",
+                "Corrida",
+                "1/2#",
+                "Corte",
+                "Altura Tacon/Alt Sin Plataforma",
+                "Comprador",
+                "Seccion",
+                "Categoria",
+                "Atributo",
+                "Tipo de Seguridad",
+                "Publico Objetivo"
+            ]
+            MAPEADO_COLUMNAS = {
+                "Articulo": "@imagen",
+                "Marca Price": "Marca",
+                "Estilo Prov": "Estilo",
+                "Descripción": "Rubro",
+                "Tallas reales": "Tallas",
+                "Calzado = Suela Ropa = Composicion": "Compo"
+            }
+
+            # Genera @ubicacion y @imagen correctamente como número entero sin decimales
+            df["@ubicacion"] = df["Ubicación"].astype(str).str.split('.').str[0] + ".eps"
+
+            ORDEN_COLUMNAS = [
+                "@imagen",
+                "Pag Act",
+                "ID",
+                "Estilo",
+                "Marca",
+                "Rubro",
+                "Color",
+                "Tallas",
+                "Compo",
+                "Forro",
+                "@ubicacion",
+                "Observacion",
+                "Observacion 1"
+            ]
         else:
             st.warning(f"El archivo '{file.name}' no coincide con los tipos esperados {nombres_catalogos}.")
             st.write(f"Nombre del archivo procesado: {nombre_catalogo_min}")
@@ -774,6 +923,18 @@ def limpiar_archivo(file):
                     "navidad" in nombre_catalogo_min or
                     "sandalias" in nombre_catalogo_min):
                 df["@imagen"] = pd.to_numeric(df["@imagen"], errors='coerce').fillna(0).astype(int).astype(str) + ".psd"
+            if("abrigador" in file_name_lower):
+                df["@imagen"] = df["@imagen"].astype(str) + ".tif"
+                df["Observacion 1"] = df["Rubro"]
+                df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
+            if("basicos" in file_name_lower):
+                df["@imagen"] = df["@imagen"].astype(str) + ".tif"
+                df["Observacion"] = df["Rubro"]
+                df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
+            if( "ella" in file_name_lower):
+                df["@imagen"] = df["@imagen"].astype(str) + ".tif"
+                df["Observacion 1"] = " "
+                df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
 
         if "Tallas" in df.columns:
             df["Tallas"] = df["Tallas"].astype(str).apply(ajustar_tallas)
