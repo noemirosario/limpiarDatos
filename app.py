@@ -153,7 +153,7 @@ def concatenar_altura(altura):
     # Convertimos la altura a cadena y agregamos "cm"
     return str(altura) + "cm"
 def modificar_suela(suela):
-    if suela == "NO APLICA":
+    if suela != "ANTIDERRAPANTE":
         return ""
     else:
         return suela
