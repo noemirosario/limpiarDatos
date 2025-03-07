@@ -741,7 +741,7 @@ def limpiar_archivo(file):
                 "Tallas",
                 "@imagen"
             ]
-        elif "abrigador" in file_name_lower:
+        elif "abrigador" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "V/N",
                 "Pag Ant",
@@ -793,7 +793,7 @@ def limpiar_archivo(file):
                 "Observacion",
                 "Observacion 1"
             ]
-        elif "basicos" in file_name_lower:
+        elif "basicos" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "V/N",
                 "Pag Ant",
@@ -841,7 +841,7 @@ def limpiar_archivo(file):
                 "@ubicacion",
                 "Observacion"
             ]
-        elif "ella" in file_name_lower:
+        elif "ella" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
                 "V/N",
                 "Pag Ant",
@@ -923,15 +923,15 @@ def limpiar_archivo(file):
                     "navidad" in nombre_catalogo_min or
                     "sandalias" in nombre_catalogo_min):
                 df["@imagen"] = pd.to_numeric(df["@imagen"], errors='coerce').fillna(0).astype(int).astype(str) + ".psd"
-            if("abrigador" in file_name_lower):
+            if("abrigador" in nombre_catalogo_min):
                 df["@imagen"] = df["@imagen"].astype(str) + ".tif"
                 df["Observacion 1"] = df["Rubro"]
                 df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
-            if("basicos" in file_name_lower):
+            if("basicos" in nombre_catalogo_min):
                 df["@imagen"] = df["@imagen"].astype(str) + ".tif"
                 df["Observacion"] = df["Rubro"]
                 df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
-            if( "ella" in file_name_lower):
+            if( "ella" in nombre_catalogo_min):
                 df["@imagen"] = df["@imagen"].astype(str) + ".tif"
                 df["Observacion 1"] = " "
                 df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
