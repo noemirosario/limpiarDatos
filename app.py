@@ -21,6 +21,7 @@ diccionario_palabras = {
     "AMBAR": "ÁMBAR",
     "OSTION": "OSTIÓN",
     "FIUSHA": "FIUSHA",  # Verifica si la forma correcta es esta o "FIUŠA" según el término que uses
+    "FUCHSIA": "FIUSHA",
     "MARRON": "MARRÓN",
     "INDIGO": "ÍNDIGO",
     "PURPURA": "PÚRPURA",
@@ -30,7 +31,7 @@ diccionario_palabras = {
     "RAYON": "RAYÓN",
     "ACRILICO": "ACRÍLICO",
     "CANAMO": "CÁÑAMO",
-    "LYOCELL": "LYOCELL",  # Se escribe igual
+    "LYOCEL": "LYOCELL", # No requiere acento
     "ETNICO": "ÉTNICO",
     "MELON": "MELÓN",
     "ELECTRICO": "ELÉCTRICO",
@@ -41,7 +42,17 @@ diccionario_palabras = {
     "BATERIA": "BATERÍA",
     "NACAR": "NÁCAR",
     "METALICO": "METÁLICO",
-    "LASER": "LÁSER"
+    "LASER": "LÁSER",
+    "PEREGRIN": "PEREGRÍN",
+    "PEDRERIA": "PEDRERÍA",
+    "CASTANA": "CASTAÑA",
+    "COGNAC": "COÑAC",
+    "COGÑAC": "COÑAC,
+    "OLIVA": "OLIVO",
+    "CREME": "CREMA",
+    "TERRACITA": "TERRACOTA",
+    "FRAPE": "FRAPPE",
+    "LATE": "LATTE"    
 }
 
 
