@@ -52,7 +52,9 @@ diccionario_palabras = {
     "CREME": "CREMA",
     "TERRACITA": "TERRACOTA",
     "FRAPE": "FRAPPE",
-    "LATE": "LATTE"    
+    "LATE": "LATTE",
+    "DUO": "DÚO",
+    "SATIN": "SATÍN"
 }
 
 
