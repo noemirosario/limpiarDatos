@@ -16,7 +16,7 @@ diccionario_palabras = {
     "CAFE": "CAFÉ",
     "CARMIN": "CARMÍN",
     "NEON": "NEÓN",
-    "TURQUESA": "TURQUESA",  # No requiere acento
+    "TURQUEZA": "TURQUESA",  # S por Z porque hay algunas definidas como turqueza
     "BALON": "BALÓN",
     "AMBAR": "ÁMBAR",
     "OSTION": "OSTIÓN",
@@ -31,7 +31,7 @@ diccionario_palabras = {
     "RAYON": "RAYÓN",
     "ACRILICO": "ACRÍLICO",
     "CANAMO": "CÁÑAMO",
-    "LYOCEL": "LYOCELL", # No requiere acento
+    "LYOCEL": "LYOCELL", # No requiere acento pero viene definido con un L y con LL el nombre correcto es con LL
     "ETNICO": "ÉTNICO",
     "MELON": "MELÓN",
     "ELECTRICO": "ELÉCTRICO",
