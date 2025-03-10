@@ -9,8 +9,6 @@ from io import BytesIO
 st.title("📂 ETL de Dummys de Artículos para su integración hacia InDesign")
 st.write("Sube un archivo de Excel y procesa la información para generar un CSV limpio.")
 
-# Castaña, Coñac, Olivo, Frappe, Crema, Terracota, Latte
-
 diccionario_palabras = {
     "SINTETICO": "SINTÉTICO",
     "CAFE": "CAFÉ",
@@ -47,7 +45,7 @@ diccionario_palabras = {
     "PEDRERIA": "PEDRERÍA",
     "CASTANA": "CASTAÑA",
     "COGNAC": "COÑAC",
-    "COGÑAC": "COÑAC,
+    "COGÑAC": "COÑAC",
     "OLIVA": "OLIVO",
     "CREME": "CREMA",
     "TERRACITA": "TERRACOTA",
