@@ -279,7 +279,11 @@ def limpiar_archivo(file):
         # Definir las palabras clave esperadas
         nombres_catalogos = ["confort","man", "urbano","sandalias", "botas", "importados",
                              "man", "accesorios", "vestir casual", "mochilas", "escolar",
+<<<<<<< HEAD
                              "navidad", "abrigador", "basicos", "ella", "kids", "licencias", "playa"]
+=======
+                             "navidad", "abrigador", "basicos", "ella"]
+>>>>>>> 3e2fdb8a6b313e615f8992c3d6e270283f20105d
 
         # Eliminar espacios extras y normalizar el nombre del archivo
         nombre_catalogo_min = file.name.lower().strip()
@@ -807,6 +811,14 @@ def limpiar_archivo(file):
             # Genera @ubicacion y @imagen correctamente como número entero sin decimales
             df["@ubicacion"] = df["Ubicación"].astype(str).str.split('.').str[0] + ".eps"
 
+<<<<<<< HEAD
+=======
+            #if "@imagen" in df.columns:
+             #   df["@imagen"] = df["@imagen"].astype(str) + ".tif"
+           # if "Rubro" in df.columns:
+             #   df["Observacion 1"] = df["Rubro"]
+
+>>>>>>> 3e2fdb8a6b313e615f8992c3d6e270283f20105d
             ORDEN_COLUMNAS = [
                 "@imagen",
                 "Pag Act",
@@ -918,6 +930,7 @@ def limpiar_archivo(file):
                 "Observacion",
                 "Observacion 1"
             ]
+<<<<<<< HEAD
 
         elif "kids" in nombre_catalogo_min:
             COLUMNAS_A_ELIMINAR = [
@@ -1067,6 +1080,8 @@ def limpiar_archivo(file):
                 "Observacion",
                 "Observacion 1"
             ]
+=======
+>>>>>>> 3e2fdb8a6b313e615f8992c3d6e270283f20105d
         else:
             st.warning(f"El archivo '{file.name}' no coincide con los tipos esperados {nombres_catalogos}.")
             st.write(f"Nombre del archivo procesado: {nombre_catalogo_min}")
@@ -1155,6 +1170,18 @@ def limpiar_archivo(file):
                     "navidad" in nombre_catalogo_min or
                     "sandalias" in nombre_catalogo_min):
                 df["@imagen"] = pd.to_numeric(df["@imagen"], errors='coerce').fillna(0).astype(int).astype(str) + ".psd"
+            if("abrigador" in nombre_catalogo_min):
+                df["@imagen"] = df["@imagen"].astype(str) + ".tif"
+                df["Observacion 1"] = df["Rubro"]
+                df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
+            if("basicos" in nombre_catalogo_min):
+                df["@imagen"] = df["@imagen"].astype(str) + ".tif"
+                df["Observacion"] = df["Rubro"]
+                df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
+            if( "ella" in nombre_catalogo_min):
+                df["@imagen"] = df["@imagen"].astype(str) + ".tif"
+                df["Observacion 1"] = " "
+                df["Rubro"] = df["Rubro"].apply(lambda x: str(x).split()[0] if pd.notna(x) else "")
 
             if("abrigador" in nombre_catalogo_min or
                 "basicos" in nombre_catalogo_min or
